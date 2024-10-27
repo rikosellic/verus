@@ -811,6 +811,7 @@ pub(crate) fn exp_to_expr(ctx: &Ctx, exp: &Exp, expr_ctxt: &ExprCtxt) -> Result<
                 exprs.push(exp_to_expr(ctx, e, expr_ctxt)?);
             }
             let typ = match &*exp.typ {
+                TypX::Primitive(Primitive::Array, typs) => typs[0].clone(),
                 TypX::Decorate(_dec, _, t) => match &**t {
                     TypX::Boxed(t) => match &**t {
                         TypX::Primitive(Primitive::Array, typs) => typs[0].clone(),
@@ -2501,6 +2502,9 @@ fn string_index_to_air(cnst: &Expr, index: usize, value: char) -> Expr {
 }
 
 fn string_indices_to_air(ctx: &Ctx, lit: Arc<String>) -> Expr {
+    if lit.len() == 0 {
+        return Arc::new(ExprX::Const(Constant::Bool(true)));
+    }
     let cnst = str_to_const_str(ctx, lit.clone());
     let mut exprs = Vec::new();
     for (i, c) in lit.chars().enumerate() {

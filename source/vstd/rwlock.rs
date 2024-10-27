@@ -362,14 +362,16 @@ struct_with_invariants_vstd!{
         }
     }
 }
-//
+
 /// Handle obtained for an exclusive write-lock from an [`RwLock`].
 ///
 /// Note that this handle does not contain a reference to the lock-protected object;
 /// ownership of the object is obtained separately from [`RwLock::acquire_write`].
 /// This may be changed in the future.
-
-
+///
+/// **Warning:** The lock is _NOT_ released automatically when the handle
+/// is dropped. You must call [`release_write`](WriteHandle::release_write).
+/// Verus does not check that lock is released.
 pub struct WriteHandle<'a, V, Pred: RwLockPredicate<V>> {
     handle: Tracked<RwLockToks::writer<(Pred, CellId), PointsTo<V>, InternalPred<V, Pred>>>,
     perm: Tracked<PointsTo<V>>,
@@ -377,6 +379,10 @@ pub struct WriteHandle<'a, V, Pred: RwLockPredicate<V>> {
 }
 
 /// Handle obtained for a shared read-lock from an [`RwLock`].
+///
+/// **Warning:** The lock is _NOT_ released automatically when the handle
+/// is dropped. You must call [`release_read`](ReadHandle::release_read).
+/// Verus does not check that lock is released.
 pub struct ReadHandle<'a, V, Pred: RwLockPredicate<V>> {
     handle: Tracked<RwLockToks::reader<(Pred, CellId), PointsTo<V>, InternalPred<V, Pred>>>,
     rwlock: &'a RwLock<V, Pred>,
@@ -515,6 +521,10 @@ impl<V, Pred: RwLockPredicate<V>> RwLock<V, Pred> {
     }
 
     /// Acquires an exclusive write-lock. To release it, use [`WriteHandle::release_write`].
+    ///
+    /// **Warning:** The lock is _NOT_ released automatically when the handle
+    /// is dropped. You must call [`WriteHandle::release_write`].
+    /// Verus does not check that lock is released.
     pub fn acquire_write(&self) -> (ret: (V, WriteHandle<V, Pred>))
         ensures
             ({
@@ -599,6 +609,10 @@ impl<V, Pred: RwLockPredicate<V>> RwLock<V, Pred> {
     }
 
     /// Acquires a shared read-lock. To release it, use [`ReadHandle::release_read`].
+    ///
+    /// **Warning:** The lock is _NOT_ released automatically when the handle
+    /// is dropped. You must call [`ReadHandle::release_read`].
+    /// Verus does not check that lock is released.
     pub fn acquire_read(&self) -> (read_handle: ReadHandle<V, Pred>)
         ensures
             read_handle.rwlock() == *self,
