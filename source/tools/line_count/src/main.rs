@@ -11,6 +11,51 @@ use tabled::settings::{
     object::{Columns, Rows},
 };
 use verus_syn::{Attribute, File, Meta, MetaList, Signature, spanned::Spanned, visit::Visit};
+use proc_macro2::{TokenStream, TokenTree, Spacing};
+
+fn rejoin_tokens(stream: TokenStream) -> TokenStream {
+    let tokens: Vec<TokenTree> = stream.into_iter().collect();
+    let mut result = Vec::new();
+    let mut i = 0;
+    
+    while i < tokens.len() {
+        if i + 1 < tokens.len() {
+            match (&tokens[i], &tokens[i + 1]) {
+                (TokenTree::Punct(punct), TokenTree::Ident(ident)) 
+                    if punct.as_char() == '!' && punct.spacing() == Spacing::Alone => {
+                    let ident_str = ident.to_string();
+                    if ident_str == "is" {
+                        // Merge ! + is -> isnt
+                        let new_ident = proc_macro2::Ident::new("isnt", punct.span());
+                        result.push(TokenTree::Ident(new_ident));
+                        i += 2; // Skip both tokens
+                        continue;
+                    } else if ident_str == "has" {
+                        // Merge ! + has -> hasnt
+                        let new_ident = proc_macro2::Ident::new("hasnt", punct.span());
+                        result.push(TokenTree::Ident(new_ident));
+                        i += 2; // Skip both tokens
+                        continue;
+                    }
+                }
+                _ => {}
+            }
+        }
+        
+        let mut token = tokens[i].clone();
+        if let TokenTree::Group(ref group) = token {
+            let inner_stream = rejoin_tokens(group.stream());
+            let mut new_group = proc_macro2::Group::new(group.delimiter(), inner_stream);
+            new_group.set_span(group.span());
+            token = TokenTree::Group(new_group);
+        }
+        
+        result.push(token);
+        i += 1;
+    }
+    
+    result.into_iter().collect()
+}
 
 struct Config {
     print_all: bool,
@@ -676,7 +721,8 @@ impl<'ast, 'f> verus_syn::visit::Visit<'ast> for Visitor<'f> {
             self.mark(i, self.mode_or_trusted(CodeKind::Definitions), LineContent::MacroDefinition);
         } else if outer_last_segment == Some("verus".into()) {
             let source_toks = &i.tokens;
-            let macro_content: File = verus_syn::parse2(source_toks.clone())
+            let processed_tokens = rejoin_tokens(source_toks.clone());
+            let macro_content: File = verus_syn::parse2(processed_tokens)
                 .map_err(|e| {
                     dbg!(&e.span().start(), &e.span().end());
                     format!("failed to parse file macro contents: {} {:?}", e, e.span())
@@ -1525,8 +1571,9 @@ fn process_file(config: Rc<Config>, input_path: &std::path::Path) -> Result<File
                     .unwrap_or(false)
                 {
                     let source_toks = &m.mac.tokens;
+                    let processed_tokens = rejoin_tokens(source_toks.clone());
                     let macro_content: File =
-                        verus_syn::parse2(source_toks.clone()).map_err(|e| {
+                        verus_syn::parse2(processed_tokens).map_err(|e| {
                             dbg!(&e.span().start(), &e.span().end());
                             format!(
                                 "failed to parse file {}: {} {:?}",
