@@ -121,6 +121,7 @@ impl SmtSolver {
         match self {
             SmtSolver::Z3 => "(:reason-unknown \"canceled\")",
             SmtSolver::Cvc5 => "(:reason-unknown resourceout)",
+            SmtSolver::Oxiz => "(:reason-unknown \"canceled\")", // Oxiz uses Z3-compatible format
         }
     }
 
@@ -128,6 +129,7 @@ impl SmtSolver {
         match self {
             SmtSolver::Z3 => "(:reason-unknown \"(incomplete",
             SmtSolver::Cvc5 => "(:reason-unknown incomplete)",
+            SmtSolver::Oxiz => "(:reason-unknown \"(incomplete", // Oxiz uses Z3-compatible format
         }
     }
 }
@@ -362,7 +364,7 @@ pub(crate) fn smt_check_assertion<'ctx>(
 }
 
 pub(crate) fn smt_get_rlimit_count(context: &mut Context) -> Result<u64, ValidityResult> {
-    assert!(matches!(context.solver, SmtSolver::Z3)); // the CVC5 output format for statistics is different
+    assert!(matches!(context.solver, SmtSolver::Z3)); // the CVC5/Oxiz output format for statistics is different
 
     context.smt_log.log_get_info("all-statistics");
     let smt_data = context.smt_log.take_pipe_data();

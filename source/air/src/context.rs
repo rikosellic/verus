@@ -75,6 +75,7 @@ impl<'a, 'b: 'a> Default for QueryContext<'a, 'b> {
 pub enum SmtSolver {
     Z3,
     Cvc5,
+    Oxiz,
 }
 
 impl Default for SmtSolver {
@@ -173,7 +174,7 @@ impl Context {
             time_smt_run: Duration::new(0, 0),
             rlimit_count: match solver {
                 SmtSolver::Z3 => Some((0, 0)),
-                SmtSolver::Cvc5 => None,
+                SmtSolver::Cvc5 | SmtSolver::Oxiz => None,
             },
             state: ContextState::NotStarted,
             expected_solver_version: None,
@@ -261,7 +262,7 @@ impl Context {
 
     pub fn set_rlimit(&mut self, rlimit: u32) {
         self.rlimit = rlimit;
-        if matches!(self.solver, SmtSolver::Z3) {
+        if matches!(self.solver, SmtSolver::Z3 | SmtSolver::Oxiz) {
             self.air_initial_log.log_set_option("rlimit", &rlimit.to_string());
             self.air_middle_log.log_set_option("rlimit", &rlimit.to_string());
             self.air_final_log.log_set_option("rlimit", &rlimit.to_string());
@@ -321,6 +322,18 @@ impl Context {
                 SmtSolver::Cvc5 => {
                     self.smt_log.log_node(&node!((set-logic {str_to_node("ALL")})));
                     self.set_z3_param_bool("incremental", true, true);
+                }
+                SmtSolver::Oxiz => {
+                    // Oxiz uses Z3-compatible options
+                    self.set_z3_param_bool("auto_config", false, true);
+                    self.set_z3_param_bool("smt.mbqi", false, true);
+                    self.set_z3_param_u32("smt.case_split", 3, true);
+                    self.set_z3_param_f64("smt.qi.eager_threshold", 100.0, true);
+                    self.set_z3_param_bool("smt.delay_units", true, true);
+                    self.set_z3_param_u32("smt.arith.solver", 2, true);
+                    self.set_z3_param_bool("smt.arith.nl", false, true);
+                    self.set_z3_param_bool("pi.enabled", false, true);
+                    self.set_z3_param_bool("rewriter.sort_disjunctions", false, true);
                 }
             }
         } else if option == "disable_incremental_solving" && value {

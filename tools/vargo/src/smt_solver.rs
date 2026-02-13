@@ -11,6 +11,7 @@ use crate::macros::warning;
 pub enum SmtSolverType {
     Z3,
     Cvc5,
+    Oxiz,
 }
 
 impl SmtSolverType {
@@ -18,6 +19,7 @@ impl SmtSolverType {
         let base = match self {
             SmtSolverType::Z3 => "z3",
             SmtSolverType::Cvc5 => "cvc5",
+            SmtSolverType::Oxiz => "oxiz",
         };
         if cfg!(target_os = "windows") {
             format!(".\\{}.exe", base)
@@ -30,6 +32,7 @@ impl SmtSolverType {
         match self {
             SmtSolverType::Z3 => "VERUS_Z3_PATH",
             SmtSolverType::Cvc5 => "VERUS_CVC5_PATH",
+            SmtSolverType::Oxiz => "VERUS_OXIZ_PATH",
         }
     }
 
@@ -39,6 +42,8 @@ impl SmtSolverType {
                 .expect("failed to compile Z3 version regex"),
             SmtSolverType::Cvc5 => Regex::new(r"This is cvc5 version (\d+\.\d+\.\d+)")
                 .expect("failed to compile cvc5 version regex"),
+            SmtSolverType::Oxiz => Regex::new(r"oxiz version (\d+\.\d+\.\d+)")
+                .expect("failed to compile oxiz version regex"),
         }
     }
 
@@ -46,6 +51,7 @@ impl SmtSolverType {
         match self {
             SmtSolverType::Z3 => consts::EXPECTED_Z3_VERSION.to_string(),
             SmtSolverType::Cvc5 => consts::EXPECTED_CVC5_VERSION.to_string(),
+            SmtSolverType::Oxiz => consts::EXPECTED_OXIZ_VERSION.to_string(),
         }
     }
 }
@@ -55,6 +61,7 @@ impl Display for SmtSolverType {
         match self {
             SmtSolverType::Cvc5 => f.write_str("cvc5"),
             SmtSolverType::Z3 => f.write_str("z3"),
+            SmtSolverType::Oxiz => f.write_str("oxiz"),
         }
     }
 }
@@ -77,12 +84,12 @@ impl SmtSolverBinary {
 
             if !path.is_file() && vargo_nest == 0 {
                 // When we fail to find Z3, we warning the user but optimistically continue
-                // Since we don't currently use cvc5, we don't warning the user about it, and we bail out
+                // Since we don't currently use cvc5/oxiz by default, we don't warning the user about them, and we bail out
                 match solver_type {
                     SmtSolverType::Z3 => warning!(
                         "{file_name} not found -- this is likely to cause errors or a broken build\nrun `tools/get-z3.(sh|ps1)` first"
                     ),
-                    SmtSolverType::Cvc5 => return None,
+                    SmtSolverType::Cvc5 | SmtSolverType::Oxiz => return None,
                 }
             }
             if std::env::var(solver_type.env_var_name()).is_err() && path.is_file() {

@@ -15,6 +15,9 @@ impl SolverInfo {
             SmtSolver::Cvc5 => {
                 SolverInfo { executable_name: "cvc5", env_path_var: "VERUS_CVC5_PATH" }
             }
+            SmtSolver::Oxiz => {
+                SolverInfo { executable_name: "oxiz", env_path_var: "VERUS_OXIZ_PATH" }
+            }
         }
     }
 
@@ -81,6 +84,7 @@ fn reader_thread(
                     == match solver {
                         SmtSolver::Z3 => DONE,
                         SmtSolver::Cvc5 => DONE_QUOTED,
+                        SmtSolver::Oxiz => DONE, // Oxiz uses same format as Z3
                     }
                 {
                     responses
@@ -111,6 +115,10 @@ impl SmtProcess {
                     "--user-pat=strict",   // Recommended by Andrew Reynolds (@ajreynol)
                     "--rlimit",
                     "1666666", // ~= 5s
+                ],
+                SmtSolver::Oxiz => vec![
+                    "--interactive",       // Interactive SMTLIB2 mode
+                    "--quiet",             // Suppress banner and non-SMTLIB output
                 ],
             })
             .stdin(std::process::Stdio::piped())

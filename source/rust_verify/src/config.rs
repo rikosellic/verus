@@ -394,6 +394,7 @@ pub fn parse_args_with_imports(
     const EXTENDED_SPINOFF_ALL: &str = "spinoff-all";
     const EXTENDED_CAPTURE_PROFILES: &str = "capture-profiles";
     const EXTENDED_CVC5: &str = "cvc5";
+    const EXTENDED_OXIZ: &str = "oxiz";
     const EXTENDED_ALLOW_INLINE_AIR: &str = "allow-inline-air";
     const EXTENDED_USE_CRATE_NAME: &str = "use-crate-name";
     const EXTENDED_AXIOM_USAGE_INFO: &str = "axiom-usage-info";
@@ -413,6 +414,7 @@ pub fn parse_args_with_imports(
             "Always collect prover performance data, but don't generate output reports",
         ),
         (EXTENDED_CVC5, "Use the cvc5 SMT solver, rather than the default (Z3)"),
+        (EXTENDED_OXIZ, "Use the oxiz SMT solver, rather than the default (Z3)"),
         (EXTENDED_ALLOW_INLINE_AIR, "Allow the POTENTIALLY UNSOUND use of inline_air_stmt"),
         (
             EXTENDED_USE_CRATE_NAME,
@@ -814,7 +816,13 @@ pub fn parse_args_with_imports(
         trace: matches.opt_present(OPT_TRACE),
         report_long_running: !matches.opt_present(OPT_NO_REPORT_LONG_RUNNING),
         use_crate_name: extended.contains_key(EXTENDED_USE_CRATE_NAME),
-        solver: if extended.contains_key(EXTENDED_CVC5) { SmtSolver::Cvc5 } else { SmtSolver::Z3 },
+        solver: if extended.contains_key(EXTENDED_CVC5) { 
+            SmtSolver::Cvc5 
+        } else if extended.contains_key(EXTENDED_OXIZ) { 
+            SmtSolver::Oxiz 
+        } else { 
+            SmtSolver::Z3 
+        },
         axiom_usage_info: extended.contains_key(EXTENDED_AXIOM_USAGE_INFO),
         check_api_safety: extended.contains_key(EXTENDED_CHECK_API_SAFETY),
         new_mut_ref: extended.contains_key(EXTENDED_NEW_MUT_REF),

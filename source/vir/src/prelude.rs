@@ -66,7 +66,7 @@ pub(crate) fn prelude_nodes(config: PreludeConfig) -> Vec<Node> {
     #[allow(non_snake_case)]
     let Height = str_to_node(T_HEIGHT);
     let height_axioms = match config.solver {
-        SmtSolver::Z3 => nodes_vec!(
+        SmtSolver::Z3 | SmtSolver::Oxiz => nodes_vec!(
         (axiom (forall ((x [Height]) (y [Height])) (!
             (= ([height_lt] x y) (and ([height_le] x y) (not (= x y))))
             :pattern (([height_lt] x y))

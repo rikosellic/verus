@@ -1311,6 +1311,7 @@ impl Verifier {
             air_context.set_expected_solver_version(match self.args.solver {
                 air::context::SmtSolver::Z3 => crate::consts::EXPECTED_Z3_VERSION.to_string(),
                 air::context::SmtSolver::Cvc5 => crate::consts::EXPECTED_CVC5_VERSION.to_string(),
+                air::context::SmtSolver::Oxiz => crate::consts::EXPECTED_OXIZ_VERSION.to_string(),
             });
         }
 
@@ -1318,7 +1319,7 @@ impl Verifier {
         let mut spunoff_time_smt_run = Duration::ZERO;
         let mut spunoff_rlimit_count: Option<(u64, u64)> = match self.args.solver {
             SmtSolver::Z3 => Some((0, 0)),
-            SmtSolver::Cvc5 => None,
+            SmtSolver::Cvc5 | SmtSolver::Oxiz => None,
         };
 
         let module = &ctx.module_path();
@@ -1492,7 +1493,7 @@ impl Verifier {
 
                         let mut func_curr_smt_rlimit_count = match self.args.solver {
                             air::context::SmtSolver::Z3 => Some(0),
-                            air::context::SmtSolver::Cvc5 => None,
+                            air::context::SmtSolver::Cvc5 | air::context::SmtSolver::Oxiz => None,
                         };
                         for cmds in commands_with_context_list.iter() {
                             if is_recommend && cmds.skip_recommends {

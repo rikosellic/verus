@@ -2260,7 +2260,7 @@ fn stm_to_stmts(ctx: &Ctx, state: &mut State, stm: &Stm) -> Result<Vec<Stmt>, Vi
                         stm.span.clone(),
                         "assert_nonlinear_by".to_string(),
                         match ctx.global.solver {
-                            SmtSolver::Z3 => Arc::new(vec![
+                            SmtSolver::Z3 | SmtSolver::Oxiz => Arc::new(vec![
                                 mk_option_command("smt.arith.solver", "6"),
                                 Arc::new(CommandX::CheckValid(query)),
                             ]),
@@ -3229,7 +3229,7 @@ pub(crate) fn body_stm_to_air(
         let query = Arc::new(QueryX { local: Arc::new(local), assertion });
         let commands = if is_nonlinear {
             match ctx.global.solver {
-                SmtSolver::Z3 => vec![
+                SmtSolver::Z3 | SmtSolver::Oxiz => vec![
                     mk_option_command("smt.arith.solver", "6"),
                     Arc::new(CommandX::CheckValid(query)),
                 ],
