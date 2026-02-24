@@ -49,7 +49,7 @@ impl<A> SeqInner<A> {
         if len == 0 {
             SeqInner::Nil
         } else {
-            SeqInner::Cons(f(0), Ghost(Self::new((len - 1) as nat, |i:int| f(i + 1))))
+            SeqInner::Cons(f(0), Ghost(Self::new((len - 1) as nat, |i: int| f(i + 1))))
         }
     }
 
@@ -387,7 +387,9 @@ proof fn lemma_seqinner_equal_from_indices<A>(s1: SeqInner<A>, s2: SeqInner<A>)
                     assert(s2.index(0) == h2);
                     assert(h1 == h2);
                     assert(t1@.len() == t2@.len());
-                    assert forall|j: int| 0 <= j < t1@.len() implies t1@.index(j) == t2@.index(j) by {
+                    assert forall|j: int| 0 <= j < t1@.len() implies t1@.index(j) == t2@.index(
+                        j,
+                    ) by {
                         assert(0 <= j + 1 < s1.len());
                         assert(s1.index(j + 1) == s2.index(j + 1));
                         assert(s1.index(j + 1) == t1@.index(j));
