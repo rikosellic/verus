@@ -386,14 +386,14 @@ proof fn lemma_seqinner_equal_from_indices<A>(s1: SeqInner<A>, s2: SeqInner<A>)
                     assert(s1.index(0) == h1);
                     assert(s2.index(0) == h2);
                     assert(h1 == h2);
-                    assert(t1.len() == t2.len());
-                    assert forall|j: int| 0 <= j < t1.len() implies t1.index(j) == t2.index(j) by {
+                    assert(t1@.len() == t2@.len());
+                    assert forall|j: int| 0 <= j < t1@.len() implies t1@.index(j) == t2@.index(j) by {
                         assert(0 <= j + 1 < s1.len());
                         assert(s1.index(j + 1) == s2.index(j + 1));
-                        assert(s1.index(j + 1) == t1.index(j));
-                        assert(s2.index(j + 1) == t2.index(j));
+                        assert(s1.index(j + 1) == t1@.index(j));
+                        assert(s2.index(j + 1) == t2@.index(j));
                     }
-                    lemma_seqinner_equal_from_indices(*t1, *t2);
+                    lemma_seqinner_equal_from_indices(t1@, t2@);
                 },
             }
         },
@@ -418,16 +418,16 @@ proof fn lemma_seqinner_deep_from_indices<A>(s1: SeqInner<A>, s2: SeqInner<A>)
                     assert(s1.index(0) =~~= h1);
                     assert(s2.index(0) =~~= h2);
                     assert(h1 =~~= h2);
-                    assert(t1.len() == t2.len());
-                    assert forall|j: int| 0 <= j < t1.len() implies t1.index(j) =~~= t2.index(
+                    assert(t1@.len() == t2@.len());
+                    assert forall|j: int| 0 <= j < t1@.len() implies t1@.index(j) =~~= t2@.index(
                         j,
                     ) by {
                         assert(0 <= j + 1 < s1.len());
                         assert(s1.index(j + 1) =~~= s2.index(j + 1));
-                        assert(s1.index(j + 1) =~~= t1.index(j));
-                        assert(s2.index(j + 1) =~~= t2.index(j));
+                        assert(s1.index(j + 1) =~~= t1@.index(j));
+                        assert(s2.index(j + 1) =~~= t2@.index(j));
                     }
-                    lemma_seqinner_deep_from_indices(*t1, *t2);
+                    lemma_seqinner_deep_from_indices(t1@, t2@);
                 },
             }
         },
