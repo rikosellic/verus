@@ -35,7 +35,7 @@ pub struct Seq<A> {
 #[verifier::accept_recursive_types(A)]
 enum SeqInner<A> {
     Nil,
-    Cons(A, Box<SeqInner<A>>),
+    Cons(A, Ghost<SeqInner<A>>),
 }
 
 impl<A> SeqInner<A> {
@@ -49,7 +49,7 @@ impl<A> SeqInner<A> {
         if len == 0 {
             SeqInner::Nil
         } else {
-            SeqInner::Cons(f(0), Box::new(Self::new((len - 1) as nat, |i:int| f(i + 1))))
+            SeqInner::Cons(f(0), Ghost(Self::new((len - 1) as nat, |i:int| f(i + 1))))
         }
     }
 
@@ -58,7 +58,7 @@ impl<A> SeqInner<A> {
     {
         match self {
             SeqInner::Nil => 0,
-            SeqInner::Cons(_, tail) => 1 + tail.len(),
+            SeqInner::Cons(_, tail) => 1 + tail@.len(),
         }
     }
 
@@ -72,7 +72,7 @@ impl<A> SeqInner<A> {
             SeqInner::Cons(head, tail) => if i == 0 {
                 head
             } else {
-                tail.index(i - 1)
+                tail@.index(i - 1)
             },
         }
     }
@@ -81,8 +81,8 @@ impl<A> SeqInner<A> {
         decreases self
     {
         match self {
-            SeqInner::Nil => SeqInner::Cons(a, Box::new(SeqInner::Nil)),
-            SeqInner::Cons(head, tail) => SeqInner::Cons(head, Box::new(tail.push(a))),
+            SeqInner::Nil => SeqInner::Cons(a, Ghost(SeqInner::Nil)),
+            SeqInner::Cons(head, tail) => SeqInner::Cons(head, Ghost(tail@.push(a))),
         }
     }
 
@@ -96,7 +96,7 @@ impl<A> SeqInner<A> {
             SeqInner::Cons(head, tail) => if i == 0 {
                 SeqInner::Cons(a, tail)
             } else {
-                SeqInner::Cons(head, Box::new(tail.update(i - 1, a)))
+                SeqInner::Cons(head, Ghost(tail@.update(i - 1, a)))
             },
         }
     }
@@ -111,11 +111,11 @@ impl<A> SeqInner<A> {
             SeqInner::Cons(head, tail) => 
             // skip elements until start_inclusive becomes 0
             if start_inclusive > 0 {
-                tail.subrange(start_inclusive - 1, end_exclusive - 1)
+                tail@.subrange(start_inclusive - 1, end_exclusive - 1)
             } else if end_exclusive <= 0 {
                 SeqInner::Nil
             } else {
-                SeqInner::Cons(head, Box::new(tail.subrange(start_inclusive, end_exclusive - 1)))
+                SeqInner::Cons(head, Ghost(tail@.subrange(start_inclusive, end_exclusive - 1)))
             },
         }
     }
@@ -125,7 +125,7 @@ impl<A> SeqInner<A> {
     {
         match self {
             SeqInner::Nil => rhs,
-            SeqInner::Cons(head, tail) => SeqInner::Cons(head, Box::new(tail.add(rhs))),
+            SeqInner::Cons(head, tail) => SeqInner::Cons(head, Ghost(tail@.add(rhs))),
         }
     }
 }
