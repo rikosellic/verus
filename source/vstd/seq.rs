@@ -177,8 +177,8 @@ proof fn lemma_seqinner_update_len<A>(s: SeqInner<A>, i: int, a: A)
         SeqInner::Cons(_, tail) => {
             if i == 0 {
             } else {
-                assert(0 <= i - 1 < tail.len());
-                lemma_seqinner_update_len(*tail, i - 1, a);
+                assert(0 <= i - 1 < tail@.len());
+                lemma_seqinner_update_len(tail@, i - 1, a);
             }
         },
     }
@@ -192,7 +192,7 @@ proof fn lemma_seqinner_push_len<A>(s: SeqInner<A>, a: A)
     match s {
         SeqInner::Nil => {},
         SeqInner::Cons(_, tail) => {
-            lemma_seqinner_push_len(*tail, a);
+            lemma_seqinner_push_len(tail@, a);
         },
     }
 }
@@ -208,7 +208,7 @@ proof fn lemma_seqinner_push_index_same<A>(s: SeqInner<A>, a: A, i: int)
     match s {
         SeqInner::Nil => {},
         SeqInner::Cons(_, tail) => {
-            lemma_seqinner_push_index_same(*tail, a, i - 1);
+            lemma_seqinner_push_index_same(tail@, a, i - 1);
         },
     }
 }
@@ -226,7 +226,7 @@ proof fn lemma_seqinner_push_index_different<A>(s: SeqInner<A>, a: A, i: int)
         SeqInner::Cons(_, tail) => {
             if i == 0 {
             } else {
-                lemma_seqinner_push_index_different(*tail, a, i - 1);
+                lemma_seqinner_push_index_different(tail@, a, i - 1);
             }
         },
     }
@@ -245,7 +245,7 @@ proof fn lemma_seqinner_update_same<A>(s: SeqInner<A>, i: int, a: A)
         SeqInner::Cons(_, tail) => {
             if i == 0 {
             } else {
-                lemma_seqinner_update_same(*tail, i - 1, a);
+                lemma_seqinner_update_same(tail@, i - 1, a);
             }
         },
     }
@@ -268,7 +268,7 @@ proof fn lemma_seqinner_update_different<A>(s: SeqInner<A>, i1: int, i2: int, a:
             } else {
                 if i1 == 0 {
                 } else {
-                    lemma_seqinner_update_different(*tail, i1 - 1, i2 - 1, a);
+                    lemma_seqinner_update_different(tail@, i1 - 1, i2 - 1, a);
                 }
             }
         },
@@ -286,10 +286,10 @@ proof fn lemma_seqinner_subrange_len<A>(s: SeqInner<A>, j: int, k: int)
         SeqInner::Nil => {},
         SeqInner::Cons(_, tail) => {
             if j > 0 {
-                lemma_seqinner_subrange_len(*tail, j - 1, k - 1);
+                lemma_seqinner_subrange_len(tail@, j - 1, k - 1);
             } else if k <= 0 {
             } else {
-                lemma_seqinner_subrange_len(*tail, 0, k - 1);
+                lemma_seqinner_subrange_len(tail@, 0, k - 1);
             }
         },
     }
@@ -308,12 +308,12 @@ proof fn lemma_seqinner_subrange_index<A>(s: SeqInner<A>, j: int, k: int, i: int
         SeqInner::Nil => {},
         SeqInner::Cons(_, tail) => {
             if j > 0 {
-                lemma_seqinner_subrange_index(*tail, j - 1, k - 1, i);
+                lemma_seqinner_subrange_index(tail@, j - 1, k - 1, i);
             } else if k <= 0 {
             } else {
                 if i == 0 {
                 } else {
-                    lemma_seqinner_subrange_index(*tail, 0, k - 1, i - 1);
+                    lemma_seqinner_subrange_index(tail@, 0, k - 1, i - 1);
                 }
             }
         },
@@ -328,7 +328,7 @@ proof fn lemma_seqinner_add_len<A>(s1: SeqInner<A>, s2: SeqInner<A>)
     match s1 {
         SeqInner::Nil => {},
         SeqInner::Cons(_, tail) => {
-            lemma_seqinner_add_len(*tail, s2);
+            lemma_seqinner_add_len(tail@, s2);
         },
     }
 }
@@ -346,7 +346,7 @@ proof fn lemma_seqinner_add_index1<A>(s1: SeqInner<A>, s2: SeqInner<A>, i: int)
         SeqInner::Cons(_, tail) => {
             if i == 0 {
             } else {
-                lemma_seqinner_add_index1(*tail, s2, i - 1);
+                lemma_seqinner_add_index1(tail@, s2, i - 1);
             }
         },
     }
@@ -363,7 +363,7 @@ proof fn lemma_seqinner_add_index2<A>(s1: SeqInner<A>, s2: SeqInner<A>, i: int)
     match s1 {
         SeqInner::Nil => {},
         SeqInner::Cons(_, tail) => {
-            lemma_seqinner_add_index2(*tail, s2, i - 1);
+            lemma_seqinner_add_index2(tail@, s2, i - 1);
         },
     }
 }
