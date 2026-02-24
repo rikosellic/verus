@@ -25,35 +25,155 @@ verus! {
 ///
 /// To prove that two sequences are equal, it is usually easiest to use the
 /// extensional equality operator `=~=`.
-#[verifier::external_body]
 #[verifier::ext_equal]
 #[verifier::accept_recursive_types(A)]
 pub struct Seq<A> {
-    dummy: marker::PhantomData<A>,
+    inner: SeqInner<A>,
+}
+
+#[verifier::ext_equal]
+#[verifier::accept_recursive_types(A)]
+enum SeqInner<A> {
+    Nil,
+    Cons(A, Box<SeqInner<A>>),
+}
+
+impl<A> SeqInner<A> {
+    pub closed spec fn empty() -> SeqInner<A> {
+        SeqInner::Nil
+    }
+
+    pub closed spec fn new(len: nat, f: spec_fn(int) -> A) -> SeqInner<A>
+        decreases len
+    {
+        if len == 0 {
+            SeqInner::Nil
+        } else {
+            SeqInner::Cons(f(0), Box::new(Self::new((len - 1) as nat, |i:int| f(i + 1))))
+        }
+    }
+
+    pub closed spec fn len(self) -> nat 
+        decreases self
+    {
+        match self {
+            SeqInner::Nil => 0,
+            SeqInner::Cons(_, tail) => 1 + tail.len(),
+        }
+    }
+
+    pub closed spec fn index(self, i: int) -> A
+        recommends
+            0 <= i < self.len(),
+        decreases self,
+    {
+        match self {
+            SeqInner::Nil => arbitrary(),
+            SeqInner::Cons(head, tail) => if i == 0 {
+                head
+            } else {
+                tail.index(i - 1)
+            },
+        }
+    }
+
+    pub closed spec fn push(self, a: A) -> SeqInner<A> 
+        decreases self
+    {
+        match self {
+            SeqInner::Nil => SeqInner::Cons(a, Box::new(SeqInner::Nil)),
+            SeqInner::Cons(head, tail) => SeqInner::Cons(head, Box::new(tail.push(a))),
+        }
+    }
+
+    pub closed spec fn update(self, i: int, a: A) -> SeqInner<A>
+        recommends
+            0 <= i < self.len(),
+        decreases self,
+    {
+        match self {
+            SeqInner::Nil => arbitrary(),
+            SeqInner::Cons(head, tail) => if i == 0 {
+                SeqInner::Cons(a, tail)
+            } else {
+                SeqInner::Cons(head, Box::new(tail.update(i - 1, a)))
+            },
+        }
+    }
+
+    pub closed spec fn subrange(self, start_inclusive: int, end_exclusive: int) -> SeqInner<A>
+        recommends
+            0 <= start_inclusive <= end_exclusive <= self.len(),
+        decreases start_inclusive, end_exclusive - start_inclusive,
+    {
+        match self {
+            SeqInner::Nil => SeqInner::Nil,
+            SeqInner::Cons(head, tail) => 
+            // skip elements until start_inclusive becomes 0
+            if start_inclusive > 0 {
+                tail.subrange(start_inclusive - 1, end_exclusive - 1)
+            } else if end_exclusive <= 0 {
+                SeqInner::Nil
+            } else {
+                SeqInner::Cons(head, Box::new(tail.subrange(start_inclusive, end_exclusive - 1)))
+            },
+        }
+    }
+
+    pub closed spec fn add(self, rhs: SeqInner<A>) -> SeqInner<A>
+        decreases self,
+    {
+        match self {
+            SeqInner::Nil => rhs,
+            SeqInner::Cons(head, tail) => SeqInner::Cons(head, Box::new(tail.add(rhs))),
+        }
+    }
+}
+
+proof fn lemma_seqinner_new_len<A>(len: nat, f: spec_fn(int) -> A)
+    ensures
+        #[trigger] SeqInner::new(len, f).len() == len,
+    decreases len,
+{
+    if len == 0 {
+        assert(SeqInner::new(len, f).len() == 0);
+    } else {
+        assert(SeqInner::new(len, f).len() == 1 + SeqInner::new((len - 1) as nat, |i:int| f(i + 1)).len());
+        lemma_seqinner_new_len((len - 1) as nat, |i:int| f(i + 1));
+    }
 }
 
 impl<A> Seq<A> {
     /// An empty sequence (i.e., a sequence of length 0).
     #[rustc_diagnostic_item = "verus::vstd::seq::Seq::empty"]
-    pub uninterp spec fn empty() -> Seq<A>;
+    pub closed spec fn empty() -> Seq<A> {
+        Seq { inner: SeqInner::empty() }
+    }
 
     /// Construct a sequence `s` of length `len` where entry `s[i]` is given by `f(i)`.
     #[rustc_diagnostic_item = "verus::vstd::seq::Seq::new"]
-    pub uninterp spec fn new(len: nat, f: impl Fn(int) -> A) -> Seq<A>;
+    pub closed spec fn new(len: nat, f: spec_fn(int) -> A) -> Seq<A>
+    {
+        Seq { inner: SeqInner::new(len, f) }
+    }
 
     /// The length of a sequence.
     #[rustc_diagnostic_item = "verus::vstd::seq::Seq::len"]
-    pub uninterp spec fn len(self) -> nat;
+    pub closed spec fn len(self) -> nat {
+        self.inner.len()
+    }
 
     /// Gets the value at the given index `i`.
     ///
     /// If `i` is not in the range `[0, self.len())`, then the resulting value
     /// is meaningless and arbitrary.
     #[rustc_diagnostic_item = "verus::vstd::seq::Seq::index"]
-    pub uninterp spec fn index(self, i: int) -> A
+    pub closed spec fn index(self, i: int) -> A
         recommends
             0 <= i < self.len(),
-    ;
+    {
+        self.inner.index(i)
+    }
 
     /// `[]` operator, synonymous with `index`
     #[verifier::inline]
@@ -77,7 +197,10 @@ impl<A> Seq<A> {
     /// }
     /// ```
     #[rustc_diagnostic_item = "verus::vstd::seq::Seq::push"]
-    pub uninterp spec fn push(self, a: A) -> Seq<A>;
+    pub closed spec fn push(self, a: A) -> Seq<A>
+    {
+        Seq { inner: self.inner.push(a) }
+    }
 
     /// Updates the sequence at the given index, replacing the element with the given
     /// value, and leaves all other entries unchanged.
@@ -92,10 +215,12 @@ impl<A> Seq<A> {
     /// }
     /// ```
     #[rustc_diagnostic_item = "verus::vstd::seq::Seq::update"]
-    pub uninterp spec fn update(self, i: int, a: A) -> Seq<A>
+    pub closed spec fn update(self, i: int, a: A) -> Seq<A>
         recommends
             0 <= i < self.len(),
-    ;
+    {
+        Seq { inner: self.inner.update(i, a) }
+    }
 
     /// Returns a sequence for the given subrange.
     ///
@@ -111,10 +236,12 @@ impl<A> Seq<A> {
     /// }
     /// ```
     #[rustc_diagnostic_item = "verus::vstd::seq::Seq::subrange"]
-    pub uninterp spec fn subrange(self, start_inclusive: int, end_exclusive: int) -> Seq<A>
+    pub closed spec fn subrange(self, start_inclusive: int, end_exclusive: int) -> Seq<A>
         recommends
             0 <= start_inclusive <= end_exclusive <= self.len(),
-    ;
+    {
+        Seq { inner: self.inner.subrange(start_inclusive, end_exclusive) }
+    }
 
     /// Returns a sequence containing only the first n elements of the original sequence
     #[verifier::inline]
@@ -139,7 +266,10 @@ impl<A> Seq<A> {
     /// }
     /// ```
     #[rustc_diagnostic_item = "verus::vstd::seq::Seq::add"]
-    pub uninterp spec fn add(self, rhs: Seq<A>) -> Seq<A>;
+    pub closed spec fn add(self, rhs: Seq<A>) -> Seq<A>
+    {
+        Seq { inner: self.inner.add(rhs.inner) }
+    }
 
     /// `+` operator, synonymous with `add`
     #[verifier::inline]
@@ -281,41 +411,51 @@ pub broadcast proof fn axiom_seq_subrange_decreases<A>(s: Seq<A>, i: int, j: int
     axiom_seq_len_decreases(s, s2);
 }
 
-pub broadcast axiom fn axiom_seq_empty<A>()
+pub broadcast proof fn axiom_seq_empty<A>()
     ensures
         #[trigger] Seq::<A>::empty().len() == 0,
-;
+{}
 
-pub broadcast axiom fn axiom_seq_new_len<A>(len: nat, f: spec_fn(int) -> A)
+pub broadcast proof fn axiom_seq_new_len<A>(len: nat, f: spec_fn(int) -> A)
     ensures
         #[trigger] Seq::new(len, f).len() == len,
-;
+{
+    lemma_seqinner_new_len(len, f);
+}
 
-pub broadcast axiom fn axiom_seq_new_index<A>(len: nat, f: spec_fn(int) -> A, i: int)
+pub broadcast proof fn axiom_seq_new_index<A>(len: nat, f: spec_fn(int) -> A, i: int)
     requires
         0 <= i < len,
     ensures
         #[trigger] Seq::new(len, f)[i] == f(i),
-;
+{
+    admit();
+}
 
-pub broadcast axiom fn axiom_seq_push_len<A>(s: Seq<A>, a: A)
+pub broadcast proof fn axiom_seq_push_len<A>(s: Seq<A>, a: A)
     ensures
         #[trigger] s.push(a).len() == s.len() + 1,
-;
+{
+    admit();
+}
 
-pub broadcast axiom fn axiom_seq_push_index_same<A>(s: Seq<A>, a: A, i: int)
+pub broadcast proof fn axiom_seq_push_index_same<A>(s: Seq<A>, a: A, i: int)
     requires
         i == s.len(),
     ensures
         #[trigger] s.push(a)[i] == a,
-;
+{
+    admit();
+}
 
-pub broadcast axiom fn axiom_seq_push_index_different<A>(s: Seq<A>, a: A, i: int)
+pub broadcast proof fn axiom_seq_push_index_different<A>(s: Seq<A>, a: A, i: int)
     requires
         0 <= i < s.len(),
     ensures
         #[trigger] s.push(a)[i] == s[i],
-;
+{
+    admit();
+}
 
 // Expensive lemma; not in the default broadcast group
 pub broadcast proof fn lemma_seq_push_index_different_alt<A>(s: Seq<A>, a: A, i: int)
@@ -328,19 +468,23 @@ pub broadcast proof fn lemma_seq_push_index_different_alt<A>(s: Seq<A>, a: A, i:
 
 }
 
-pub broadcast axiom fn axiom_seq_update_len<A>(s: Seq<A>, i: int, a: A)
+pub broadcast proof fn axiom_seq_update_len<A>(s: Seq<A>, i: int, a: A)
     requires
         0 <= i < s.len(),
     ensures
         #[trigger] s.update(i, a).len() == s.len(),
-;
+{
+    admit();
+}
 
-pub broadcast axiom fn axiom_seq_update_same<A>(s: Seq<A>, i: int, a: A)
+pub broadcast proof fn axiom_seq_update_same<A>(s: Seq<A>, i: int, a: A)
     requires
         0 <= i < s.len(),
     ensures
         #[trigger] s.update(i, a)[i] == a,
-;
+{
+    admit();
+}
 
 // Expensive lemma; not in the default broadcast group
 pub broadcast proof fn lemma_seq_update_same_alt<A>(s: Seq<A>, i: int, a: A)
@@ -354,14 +498,16 @@ pub broadcast proof fn lemma_seq_update_same_alt<A>(s: Seq<A>, i: int, a: A)
 
 }
 
-pub broadcast axiom fn axiom_seq_update_different<A>(s: Seq<A>, i1: int, i2: int, a: A)
+pub broadcast proof fn axiom_seq_update_different<A>(s: Seq<A>, i1: int, i2: int, a: A)
     requires
         0 <= i1 < s.len(),
         0 <= i2 < s.len(),
         i1 != i2,
     ensures
         #[trigger] s.update(i2, a)[i1] == s[i1],
-;
+{
+    admit();
+}
 
 // Expensive lemma; not in the default broadcast group
 pub broadcast proof fn lemma_seq_update_different_alt<A>(s: Seq<A>, i1: int, i2: int, a: A)
@@ -392,20 +538,24 @@ pub broadcast axiom fn axiom_seq_ext_equal_deep<A>(s1: Seq<A>, s2: Seq<A>)
         },
 ;
 
-pub broadcast axiom fn axiom_seq_subrange_len<A>(s: Seq<A>, j: int, k: int)
+pub broadcast proof fn axiom_seq_subrange_len<A>(s: Seq<A>, j: int, k: int)
     requires
         0 <= j <= k <= s.len(),
     ensures
         #[trigger] s.subrange(j, k).len() == k - j,
-;
+{
+    admit();
+}
 
-pub broadcast axiom fn axiom_seq_subrange_index<A>(s: Seq<A>, j: int, k: int, i: int)
+pub broadcast proof fn axiom_seq_subrange_index<A>(s: Seq<A>, j: int, k: int, i: int)
     requires
         0 <= j <= k <= s.len(),
         0 <= i < k - j,
     ensures
         #[trigger] s.subrange(j, k)[i] == s[i + j],
-;
+{
+    admit();
+}
 
 // Expensive lemma; not in the default broadcast group
 pub broadcast proof fn lemma_seq_subrange_index_alt<A>(s: Seq<A>, j: int, k: int, i: int)
@@ -433,24 +583,30 @@ pub broadcast proof fn lemma_seq_two_subranges_index<A>(s: Seq<A>, j: int, k1: i
 
 }
 
-pub broadcast axiom fn axiom_seq_add_len<A>(s1: Seq<A>, s2: Seq<A>)
+pub broadcast proof fn axiom_seq_add_len<A>(s1: Seq<A>, s2: Seq<A>)
     ensures
         #[trigger] s1.add(s2).len() == s1.len() + s2.len(),
-;
+{
+    admit();
+}
 
-pub broadcast axiom fn axiom_seq_add_index1<A>(s1: Seq<A>, s2: Seq<A>, i: int)
+pub broadcast proof fn axiom_seq_add_index1<A>(s1: Seq<A>, s2: Seq<A>, i: int)
     requires
         0 <= i < s1.len(),
     ensures
         #[trigger] s1.add(s2)[i] == s1[i],
-;
+{
+    admit();
+}
 
-pub broadcast axiom fn axiom_seq_add_index2<A>(s1: Seq<A>, s2: Seq<A>, i: int)
+pub broadcast proof fn axiom_seq_add_index2<A>(s1: Seq<A>, s2: Seq<A>, i: int)
     requires
         s1.len() <= i < s1.len() + s2.len(),
     ensures
         #[trigger] s1.add(s2)[i] == s2[i - s1.len()],
-;
+{
+    admit();
+}
 
 // Expensive lemma; not in the default broadcast group
 pub broadcast proof fn lemma_seq_add_index1_alt<A>(s1: Seq<A>, s2: Seq<A>, i: int)
