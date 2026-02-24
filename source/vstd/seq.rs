@@ -27,15 +27,15 @@ verus! {
 /// extensional equality operator `=~=`.
 #[verifier::ext_equal]
 #[verifier::accept_recursive_types(A)]
-pub struct Seq<A> {
-    inner: SeqInner<A>,
+pub ghost struct Seq<A> {
+    ghost inner: SeqInner<A>,
 }
 
 #[verifier::ext_equal]
 #[verifier::accept_recursive_types(A)]
-enum SeqInner<A> {
+ghost enum SeqInner<A> {
     Nil,
-    Cons(A, Ghost<SeqInner<A>>),
+    Cons(Ghost<A>, Ghost<SeqInner<A>>),
 }
 
 impl<A> SeqInner<A> {
@@ -49,7 +49,11 @@ impl<A> SeqInner<A> {
         if len == 0 {
             SeqInner::Nil
         } else {
+<<<<<<< seq-model-new
             SeqInner::Cons(f(0), Ghost(Self::new((len - 1) as nat, |i: int| f(i + 1))))
+=======
+            SeqInner::Cons(Ghost(f(0)), Ghost(Self::new((len - 1) as nat, |i:int| f(i + 1))))
+>>>>>>> seq-model-new
         }
     }
 
@@ -70,7 +74,7 @@ impl<A> SeqInner<A> {
         match self {
             SeqInner::Nil => arbitrary(),
             SeqInner::Cons(head, tail) => if i == 0 {
-                head
+                head@
             } else {
                 tail@.index(i - 1)
             },
@@ -81,7 +85,7 @@ impl<A> SeqInner<A> {
         decreases self,
     {
         match self {
-            SeqInner::Nil => SeqInner::Cons(a, Ghost(SeqInner::Nil)),
+            SeqInner::Nil => SeqInner::Cons(Ghost(a), Ghost(SeqInner::Nil)),
             SeqInner::Cons(head, tail) => SeqInner::Cons(head, Ghost(tail@.push(a))),
         }
     }
@@ -94,7 +98,7 @@ impl<A> SeqInner<A> {
         match self {
             SeqInner::Nil => arbitrary(),
             SeqInner::Cons(head, tail) => if i == 0 {
-                SeqInner::Cons(a, tail)
+                SeqInner::Cons(Ghost(a), tail)
             } else {
                 SeqInner::Cons(head, Ghost(tail@.update(i - 1, a)))
             },
@@ -738,7 +742,6 @@ pub broadcast proof fn axiom_seq_push_index_same<A>(s: Seq<A>, a: A, i: int)
         #[trigger] s.push(a)[i] == a,
 {
     lemma_seqinner_push_index_same(s.inner, a, i);
-    lemma_seqinner_push_len(s.inner, a);
 }
 
 pub broadcast proof fn axiom_seq_push_index_different<A>(s: Seq<A>, a: A, i: int)
@@ -748,7 +751,6 @@ pub broadcast proof fn axiom_seq_push_index_different<A>(s: Seq<A>, a: A, i: int
         #[trigger] s.push(a)[i] == s[i],
 {
     lemma_seqinner_push_index_different(s.inner, a, i);
-    lemma_seqinner_push_len(s.inner, a);
 }
 
 // Expensive lemma; not in the default broadcast group
@@ -769,7 +771,6 @@ pub broadcast proof fn axiom_seq_update_len<A>(s: Seq<A>, i: int, a: A)
         #[trigger] s.update(i, a).len() == s.len(),
 {
     lemma_seqinner_update_len(s.inner, i, a);
-    assert(s.update(i, a).len() == s.len());
 }
 
 pub broadcast proof fn axiom_seq_update_same<A>(s: Seq<A>, i: int, a: A)
@@ -779,7 +780,6 @@ pub broadcast proof fn axiom_seq_update_same<A>(s: Seq<A>, i: int, a: A)
         #[trigger] s.update(i, a)[i] == a,
 {
     lemma_seqinner_update_same(s.inner, i, a);
-    lemma_seqinner_update_len(s.inner, i, a);
 }
 
 // Expensive lemma; not in the default broadcast group
@@ -803,7 +803,6 @@ pub broadcast proof fn axiom_seq_update_different<A>(s: Seq<A>, i1: int, i2: int
         #[trigger] s.update(i2, a)[i1] == s[i1],
 {
     lemma_seqinner_update_different(s.inner, i1, i2, a);
-    lemma_seqinner_update_len(s.inner, i2, a);
 }
 
 // Expensive lemma; not in the default broadcast group
@@ -876,7 +875,6 @@ pub broadcast proof fn axiom_seq_subrange_index<A>(s: Seq<A>, j: int, k: int, i:
         #[trigger] s.subrange(j, k)[i] == s[i + j],
 {
     lemma_seqinner_subrange_index(s.inner, j, k, i);
-    lemma_seqinner_subrange_len(s.inner, j, k);
 }
 
 // Expensive lemma; not in the default broadcast group
@@ -919,7 +917,6 @@ pub broadcast proof fn axiom_seq_add_index1<A>(s1: Seq<A>, s2: Seq<A>, i: int)
         #[trigger] s1.add(s2)[i] == s1[i],
 {
     lemma_seqinner_add_index1(s1.inner, s2.inner, i);
-    lemma_seqinner_add_len(s1.inner, s2.inner);
 }
 
 pub broadcast proof fn axiom_seq_add_index2<A>(s1: Seq<A>, s2: Seq<A>, i: int)
@@ -929,7 +926,6 @@ pub broadcast proof fn axiom_seq_add_index2<A>(s1: Seq<A>, s2: Seq<A>, i: int)
         #[trigger] s1.add(s2)[i] == s2[i - s1.len()],
 {
     lemma_seqinner_add_index2(s1.inner, s2.inner, i);
-    lemma_seqinner_add_len(s1.inner, s2.inner);
 }
 
 // Expensive lemma; not in the default broadcast group
