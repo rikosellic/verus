@@ -49,11 +49,7 @@ impl<A> SeqInner<A> {
         if len == 0 {
             SeqInner::Nil
         } else {
-<<<<<<< seq-model-new
-            SeqInner::Cons(f(0), Ghost(Self::new((len - 1) as nat, |i: int| f(i + 1))))
-=======
             SeqInner::Cons(Ghost(f(0)), Ghost(Self::new((len - 1) as nat, |i:int| f(i + 1))))
->>>>>>> seq-model-new
         }
     }
 
@@ -143,7 +139,6 @@ proof fn lemma_seqinner_new_len<A>(len: nat, f: spec_fn(int) -> A)
     decreases len,
 {
     if len == 0 {
-        assert(SeqInner::new(len, f).len() == 0);
     } else {
         assert(SeqInner::new(len, f).len() == 1 + SeqInner::new(
             (len - 1) as nat,
@@ -175,13 +170,10 @@ proof fn lemma_seqinner_update_len<A>(s: SeqInner<A>, i: int, a: A)
     decreases s,
 {
     match s {
-        SeqInner::Nil => {
-            assert(false);
-        },
+        SeqInner::Nil => {},
         SeqInner::Cons(_, tail) => {
             if i == 0 {
             } else {
-                assert(0 <= i - 1 < tail@.len());
                 lemma_seqinner_update_len(tail@, i - 1, a);
             }
         },
@@ -372,40 +364,6 @@ proof fn lemma_seqinner_add_index2<A>(s1: SeqInner<A>, s2: SeqInner<A>, i: int)
     }
 }
 
-proof fn lemma_seqinner_equal_from_indices<A>(s1: SeqInner<A>, s2: SeqInner<A>)
-    requires
-        s1.len() == s2.len(),
-        forall|i: int| 0 <= i < s1.len() ==> s1.index(i) == s2.index(i),
-    ensures
-        s1 == s2,
-    decreases s1,
-{
-    match s1 {
-        SeqInner::Nil => {},
-        SeqInner::Cons(h1, t1) => {
-            match s2 {
-                SeqInner::Nil => {},
-                SeqInner::Cons(h2, t2) => {
-                    assert(s1.index(0) == s2.index(0));
-                    assert(s1.index(0) == h1);
-                    assert(s2.index(0) == h2);
-                    assert(h1 == h2);
-                    assert(t1@.len() == t2@.len());
-                    assert forall|j: int| 0 <= j < t1@.len() implies t1@.index(j) == t2@.index(
-                        j,
-                    ) by {
-                        assert(0 <= j + 1 < s1.len());
-                        assert(s1.index(j + 1) == s2.index(j + 1));
-                        assert(s1.index(j + 1) == t1@.index(j));
-                        assert(s2.index(j + 1) == t2@.index(j));
-                    }
-                    lemma_seqinner_equal_from_indices(t1@, t2@);
-                },
-            }
-        },
-    }
-}
-
 proof fn lemma_seqinner_deep_from_indices<A>(s1: SeqInner<A>, s2: SeqInner<A>)
     requires
         s1.len() == s2.len(),
@@ -421,17 +379,10 @@ proof fn lemma_seqinner_deep_from_indices<A>(s1: SeqInner<A>, s2: SeqInner<A>)
                 SeqInner::Nil => {},
                 SeqInner::Cons(h2, t2) => {
                     assert(s1.index(0) =~~= s2.index(0));
-                    assert(s1.index(0) =~~= h1);
-                    assert(s2.index(0) =~~= h2);
-                    assert(h1 =~~= h2);
-                    assert(t1@.len() == t2@.len());
                     assert forall|j: int| 0 <= j < t1@.len() implies t1@.index(j) =~~= t2@.index(
                         j,
                     ) by {
-                        assert(0 <= j + 1 < s1.len());
                         assert(s1.index(j + 1) =~~= s2.index(j + 1));
-                        assert(s1.index(j + 1) =~~= t1@.index(j));
-                        assert(s2.index(j + 1) =~~= t2@.index(j));
                     }
                     lemma_seqinner_deep_from_indices(t1@, t2@);
                 },
@@ -724,7 +675,6 @@ pub broadcast proof fn axiom_seq_new_index<A>(len: nat, f: spec_fn(int) -> A, i:
     ensures
         #[trigger] Seq::new(len, f)[i] == f(i),
 {
-    lemma_seqinner_new_len(len, f);
     lemma_seqinner_new_index(len, f, i);
 }
 
@@ -825,17 +775,7 @@ pub broadcast proof fn axiom_seq_ext_equal<A>(s1: Seq<A>, s2: Seq<A>)
             &&& forall|i: int| 0 <= i < s1.len() ==> s1[i] == s2[i]
         },
 {
-    if ({
-        &&& s1.len() == s2.len()
-        &&& forall|i: int| 0 <= i < s1.len() ==> s1[i] == s2[i]
-    }) {
-        assert forall|i: int| 0 <= i < s1.inner.len() implies s1.inner.index(i) == s2.inner.index(
-            i,
-        ) by {
-            assert(s1[i] == s2[i]);
-        }
-        lemma_seqinner_equal_from_indices(s1.inner, s2.inner);
-    }
+    axiom_seq_ext_equal_deep(s1, s2);
 }
 
 pub broadcast proof fn axiom_seq_ext_equal_deep<A>(s1: Seq<A>, s2: Seq<A>)
