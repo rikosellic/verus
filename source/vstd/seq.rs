@@ -27,15 +27,15 @@ verus! {
 /// extensional equality operator `=~=`.
 #[verifier::ext_equal]
 #[verifier::accept_recursive_types(A)]
-pub ghost struct Seq<A> {
-    ghost inner: SeqInner<A>,
+pub tracked struct Seq<A> {
+    tracked inner: SeqInner<A>,
 }
 
 #[verifier::ext_equal]
 #[verifier::accept_recursive_types(A)]
-ghost enum SeqInner<A> {
+tracked enum SeqInner<A> {
     Nil,
-    Cons(Ghost<A>, Ghost<SeqInner<A>>),
+    Cons(Tracked<A>, Tracked<SeqInner<A>>),
 }
 
 impl<A> SeqInner<A> {
@@ -49,7 +49,7 @@ impl<A> SeqInner<A> {
         if len == 0 {
             SeqInner::Nil
         } else {
-            SeqInner::Cons(Ghost(f(0)), Ghost(Self::new((len - 1) as nat, |i:int| f(i + 1))))
+            SeqInner::Cons(Tracked(f(0)), Tracked(Self::new((len - 1) as nat, |i:int| f(i + 1))))
         }
     }
 
@@ -81,8 +81,8 @@ impl<A> SeqInner<A> {
         decreases self,
     {
         match self {
-            SeqInner::Nil => SeqInner::Cons(Ghost(a), Ghost(SeqInner::Nil)),
-            SeqInner::Cons(head, tail) => SeqInner::Cons(head, Ghost(tail@.push(a))),
+            SeqInner::Nil => SeqInner::Cons(Tracked(a), Tracked(SeqInner::Nil)),
+            SeqInner::Cons(head, tail) => SeqInner::Cons(head, Tracked(tail@.push(a))),
         }
     }
 
@@ -94,9 +94,9 @@ impl<A> SeqInner<A> {
         match self {
             SeqInner::Nil => arbitrary(),
             SeqInner::Cons(head, tail) => if i == 0 {
-                SeqInner::Cons(Ghost(a), tail)
+                SeqInner::Cons(Tracked(a), tail)
             } else {
-                SeqInner::Cons(head, Ghost(tail@.update(i - 1, a)))
+                SeqInner::Cons(head, Tracked(tail@.update(i - 1, a)))
             },
         }
     }
@@ -118,7 +118,7 @@ impl<A> SeqInner<A> {
             } else if end_exclusive <= 0 {
                 SeqInner::Nil
             } else {
-                SeqInner::Cons(head, Ghost(tail@.subrange(start_inclusive, end_exclusive - 1)))
+                SeqInner::Cons(head, Tracked(tail@.subrange(start_inclusive, end_exclusive - 1)))
             },
         }
     }
@@ -128,7 +128,7 @@ impl<A> SeqInner<A> {
     {
         match self {
             SeqInner::Nil => rhs,
-            SeqInner::Cons(head, tail) => SeqInner::Cons(head, Ghost(tail@.add(rhs))),
+            SeqInner::Cons(head, tail) => SeqInner::Cons(head, Tracked(tail@.add(rhs))),
         }
     }
 }
@@ -540,12 +540,11 @@ impl<A> Seq<A> {
         self[0]
     }
 
-    #[verifier(external_body)]
     pub proof fn tracked_empty() -> (tracked ret: Self)
         ensures
             ret === Seq::empty(),
     {
-        unimplemented!()
+        Self{ inner: SeqInner::Nil }
     }
 
     #[verifier(external_body)]
