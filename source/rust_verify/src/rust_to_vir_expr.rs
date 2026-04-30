@@ -2008,7 +2008,7 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
     current_modifier: ExprModifier,
 ) -> Result<ExprOrPlace, VirErr> {
     let bctx = if matches!(&expr.kind, ExprKind::Loop(..)) {
-        &bctx.set_header_setting(HeaderSetting::Loop)
+        &bctx.set_header_setting(HeaderSetting::Loop(expr.hir_id))
     } else {
         bctx
     };
@@ -2640,12 +2640,13 @@ pub(crate) fn expr_to_vir_innermost<'tcx>(
             }
         },
         ExprKind::Binary(op, lhs, rhs) => {
-            let vlhs = expr_to_vir_consume(bctx, lhs, modifier)?;
-            let vrhs = expr_to_vir_consume(bctx, rhs, modifier)?;
             let ret = operator_overload_to_vir(bctx, expr, modifier)?;
             if let Some(r) = ret {
                 return Ok(ExprOrPlace::Expr(r));
             }
+
+            let vlhs = expr_to_vir_consume(bctx, lhs, modifier)?;
+            let vrhs = expr_to_vir_consume(bctx, rhs, modifier)?;
             let vop = binopkind_to_binaryop(bctx, op, lhs, rhs)?;
             let e = mk_expr(ExprX::Binary(vop, vlhs, vrhs))?.expect_expr();
             match op.node {
