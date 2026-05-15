@@ -2722,3 +2722,28 @@ test_verify_one_file_with_options! {
         }
     } => Err(err) => assert_fails_type_invariant_error(err, 2)
 }
+
+test_verify_one_file! {
+    #[test] struct_with_invariants_assoc_type_prefix verus_code! {
+        use core::marker::PhantomData;
+        use vstd::atomic_ghost::AtomicPtr;
+        use vstd::prelude::*;
+
+        trait HasTarget {
+            type Target;
+        }
+
+        struct_with_invariants!{
+            pub struct S<A: HasTarget>  {
+                a: AtomicPtr<<A as HasTarget>::Target,_,(),_>,
+                _phantom: PhantomData<*const A::Target>,
+            }
+
+            closed spec fn wf(self) -> bool {
+                invariant on a with (_phantom) is (v:*mut <A as HasTarget>::Target,g:()) {
+                    true
+                }
+            }
+        }
+    } => Ok(())
+}
