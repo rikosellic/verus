@@ -52,13 +52,8 @@ fn struct_decl_inv_main(sdi: SDI) -> parse::Result<TokenStream> {
     sdi.item_struct.to_tokens(&mut stream);
 
     let fields_filled_in = get_fields(&sdi.item_struct.fields)?;
-    let all_struct_params: HashSet<String> = sdi
-        .item_struct
-        .generics
-        .params
-        .iter()
-        .map(generic_param_to_string)
-        .collect();
+    let all_struct_params: HashSet<String> =
+        sdi.item_struct.generics.params.iter().map(generic_param_to_string).collect();
     for field in fields_filled_in.iter() {
         output_field_type_alias(
             &main_name,
@@ -701,10 +696,7 @@ fn output_invariant(
             // Build the predicate struct as carrying a `PhantomData` over each
             // struct generic param so the auto-impl can constrain those params.
             let (pred_struct_decl, pred_self_ty) = if type_params.is_empty() {
-                (
-                    quote! { #vis struct #predname { } },
-                    quote! { #predname },
-                )
+                (quote! { #vis struct #predname { } }, quote! { #predname })
             } else {
                 let type_args = remove_bounds(type_params);
                 let phantom_tys: Vec<TokenStream> = type_params
@@ -879,15 +871,13 @@ fn output_field_type_alias(
     where_clause: &Option<verus_syn::WhereClause>,
 ) {
     let field_ident = field.ident.as_ref().unwrap();
-    let ident =
-        Ident::new(&format!("FieldType_{main_name}_{field_ident}"), Span::call_site());
+    let ident = Ident::new(&format!("FieldType_{main_name}_{field_ident}"), Span::call_site());
     let utp = used_type_params.get(&field_ident.to_string()).unwrap();
     let field_ty = &field.ty;
 
     // Restrict the struct's where clause to predicates that only reference
     // generic params that are present on this alias.
-    let used_param_names: HashSet<String> =
-        utp.iter().map(generic_param_to_string).collect();
+    let used_param_names: HashSet<String> = utp.iter().map(generic_param_to_string).collect();
     // Strip from each kept param any bounds that reference params not in scope.
     let utp_restricted: Vec<GenericParam> = utp
         .iter()
@@ -903,10 +893,7 @@ fn output_field_type_alias(
         if preds.is_empty() {
             None
         } else {
-            Some(verus_syn::WhereClause {
-                where_token: wc.where_token,
-                predicates: preds,
-            })
+            Some(verus_syn::WhereClause { where_token: wc.where_token, predicates: preds })
         }
     });
 
@@ -1345,9 +1332,7 @@ fn restrict_param_bounds(
                     let mut found = HashSet::new();
                     let mut visitor = CollectIdentsVisitor { result: &mut found };
                     visit::visit_type_param_bound(&mut visitor, *b);
-                    found
-                        .iter()
-                        .all(|n| !all_struct_params.contains(n) || allowed.contains(n))
+                    found.iter().all(|n| !all_struct_params.contains(n) || allowed.contains(n))
                 })
                 .cloned()
                 .collect();
