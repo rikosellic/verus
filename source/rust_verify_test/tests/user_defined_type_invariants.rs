@@ -2729,7 +2729,7 @@ test_verify_one_file! {
         use vstd::atomic_ghost::AtomicPtr;
         use vstd::prelude::*;
 
-        trait HasTarget {
+        pub trait HasTarget {
             type Target;
         }
 
