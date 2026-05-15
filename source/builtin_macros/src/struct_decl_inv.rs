@@ -1208,14 +1208,14 @@ struct UsedParamsVisitor {
 impl<'ast> Visit<'ast> for UsedParamsVisitor {
     fn visit_type_path(&mut self, type_path: &TypePath) {
         let TypePath { qself, path } = type_path;
-        if qself.is_none() && path.leading_colon.is_none() {
-            if let Some(first_segment) = path.segments.first() {
-                if first_segment.arguments == PathArguments::None {
-                    let id = first_segment.ident.to_string();
-                    if self.params.contains(&id) {
-                        self.result.insert(id);
-                    }
-                }
+        if qself.is_none()
+            && path.leading_colon.is_none()
+            && path.segments.len() == 1
+            && path.segments[0].arguments == PathArguments::None
+        {
+            let id = path.segments[0].ident.to_string();
+            if self.params.contains(&id) {
+                self.result.insert(id);
             }
         }
 

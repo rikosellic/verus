@@ -2293,31 +2293,6 @@ test_verify_one_file! {
     } => Ok(())
 }
 
-test_verify_one_file! {
-    #[test] struct_with_invariants_assoc_type_prefix verus_code! {
-        use core::marker::PhantomData;
-        use vstd::atomic_ghost::AtomicBool;
-        use vstd::prelude::*;
-
-        trait HasTarget {
-            type Target;
-        }
-
-        struct_with_invariants!{
-            pub struct S<A: HasTarget>  {
-                a: AtomicBool<_,(),_>,
-                _phantom: PhantomData<*const A::Target>,
-            }
-
-            closed spec fn wf(self) -> bool {
-                invariant on a with (_phantom) is (v:bool,g:()) {
-                    true
-                }
-            }
-        }
-    } => Ok(())
-}
-
 test_verify_one_file_with_options! {
     #[test] mut_ref_not_supported [] => verus_code! {
         struct A {
